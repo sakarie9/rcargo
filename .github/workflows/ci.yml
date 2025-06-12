@@ -1,4 +1,4 @@
-name: build
+name: ci
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci-build:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

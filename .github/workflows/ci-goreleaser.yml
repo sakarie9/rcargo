@@ -1,10 +1,10 @@
-name: build
+name: ci-goreleaser
 
 on:
   workflow_dispatch:
 
 jobs:
-  ci-goreleaser:
+  goreleaser:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
