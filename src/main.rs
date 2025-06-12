@@ -8,7 +8,7 @@ mod commands;
 mod utils;
 
 use commands::{handle_purge_command, handle_size_command};
-use utils::ProjectIdentifier;
+use utils::{ProjectIdentifier, create_target_symlink};
 
 /// Default target directory location when `RCARGO_TARGET_DIR` is not set.
 ///
@@ -19,37 +19,6 @@ const DEFAULT_TARGET_DIR: &str = "/tmp/rcargo_targets";
 
 /// Global target directory that is computed once and cached for performance
 static TARGET_DIR: OnceLock<String> = OnceLock::new();
-
-/// Prints version information for both rcargo and the underlying cargo tool.
-///
-/// This function displays the rcargo version from the package metadata and
-/// attempts to get and display the cargo version by executing `cargo --version`.
-///
-/// # Examples
-///
-/// ```text
-/// rcargo 0.1.0
-/// cargo 1.75.0 (1d8b05cdd 2023-11-20)
-/// ```
-fn print_version() {
-    // Print rcargo version
-    println!("rcargo {}", env!("CARGO_PKG_VERSION"));
-
-    // Print cargo version
-    match Command::new("cargo").arg("--version").output() {
-        Ok(output) => {
-            if output.status.success() {
-                let cargo_version = String::from_utf8_lossy(&output.stdout);
-                print!("{}", cargo_version);
-            } else {
-                eprintln!("Failed to get cargo version");
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to execute cargo --version: {}", e);
-        }
-    }
-}
 
 fn main() {
     let cli = Cli::parse();
@@ -114,6 +83,37 @@ pub fn get_target_dir() -> &'static str {
     })
 }
 
+/// Prints version information for both rcargo and the underlying cargo tool.
+///
+/// This function displays the rcargo version from the package metadata and
+/// attempts to get and display the cargo version by executing `cargo --version`.
+///
+/// # Examples
+///
+/// ```text
+/// rcargo 0.1.0
+/// cargo 1.75.0 (1d8b05cdd 2023-11-20)
+/// ```
+fn print_version() {
+    // Print rcargo version
+    println!("rcargo {}", env!("CARGO_PKG_VERSION"));
+
+    // Print cargo version
+    match Command::new("cargo").arg("--version").output() {
+        Ok(output) => {
+            if output.status.success() {
+                let cargo_version = String::from_utf8_lossy(&output.stdout);
+                print!("{}", cargo_version);
+            } else {
+                eprintln!("Failed to get cargo version");
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to execute cargo --version: {}", e);
+        }
+    }
+}
+
 // Executes the main rcargo functionality based on parsed command line arguments.
 fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     // Handle rcargo-specific subcommands
@@ -163,6 +163,11 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
         } else {
             exit(1);
         }
+    }
+
+    // Create target symlink after successful execution
+    if let Err(e) = create_target_symlink(&project_path, &cargo_target_dir) {
+        eprintln!("Warning: Could not create target symlink: {}", e);
     }
 
     Ok(())

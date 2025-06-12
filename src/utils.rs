@@ -1,6 +1,12 @@
 use serde::Deserialize;
-use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::{env, fs};
+
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
+
+#[cfg(windows)]
+use std::os::windows::fs as windows_fs;
 
 /// Structure for parsing Cargo.toml files.
 #[derive(Deserialize)]
@@ -119,4 +125,121 @@ fn get_project_name(project_path: &Path) -> Result<String, Box<dyn std::error::E
         .and_then(|name| name.to_str())
         .unwrap_or("unknown")
         .to_string())
+}
+
+// Helper function to create the target symlink
+pub fn create_target_symlink(
+    project_path: &PathBuf,
+    cargo_target_dir: &PathBuf,
+) -> Result<(), std::io::Error> {
+    if env::var("RCARGO_NO_TARGET_LINK")
+        .map_or(false, |val| val.eq_ignore_ascii_case("true") || val == "1")
+    {
+        return Ok(()); // Skip creating link if RCARGO_NO_TARGET_LINK is set
+    }
+
+    let symlink_name_from_env = env::var("RCARGO_TARGET_LINK_NAME").unwrap_or_default();
+    let symlink_name = if symlink_name_from_env.is_empty() {
+        "target_rcargo"
+    } else {
+        &symlink_name_from_env
+    };
+
+    let symlink_path = project_path.join(symlink_name);
+    let mut create_link = true;
+
+    if symlink_path.exists() {
+        match fs::symlink_metadata(&symlink_path) {
+            Ok(metadata) => {
+                if metadata.file_type().is_symlink() {
+                    // If same target directory, do nothing
+                    if let Ok(existing_target) = fs::read_link(&symlink_path) {
+                        if existing_target == cargo_target_dir.as_path() {
+                            return Ok(());
+                        }
+                    }
+                    // If symlink exists but points to a different target, remove it
+                    if let Err(e) = fs::remove_file(&symlink_path) {
+                        eprintln!(
+                            "Warning: Failed to remove existing symlink at '{}': {}. Proceeding to create new one.",
+                            symlink_path.display(),
+                            e
+                        );
+                    }
+                } else if metadata.is_file() {
+                    eprintln!(
+                        "Warning: '{}' already exists and is a file. Skipping symlink creation.",
+                        symlink_path.display()
+                    );
+                    create_link = false;
+                } else if metadata.is_dir() {
+                    eprintln!(
+                        "Warning: '{}' already exists and is a directory. Skipping symlink creation.",
+                        symlink_path.display()
+                    );
+                    create_link = false;
+                } else {
+                    eprintln!(
+                        "Warning: '{}' exists and is not a file, directory, or symlink. Skipping symlink creation.",
+                        symlink_path.display()
+                    );
+                    create_link = false;
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "Warning: Failed to get metadata for '{}': {}. Attempting to create symlink anyway.",
+                    symlink_path.display(),
+                    e
+                );
+            }
+        }
+    }
+
+    if create_link {
+        #[cfg(unix)]
+        {
+            match unix_fs::symlink(cargo_target_dir, &symlink_path) {
+                Ok(_) => println!(
+                    "RCargo: Created symlink '{}' -> '{}'",
+                    symlink_path.display(),
+                    cargo_target_dir.display()
+                ),
+                Err(e) => eprintln!(
+                    "Warning: Failed to create symlink '{}' -> '{}'. Error: {}",
+                    symlink_path.display(),
+                    cargo_target_dir.display(),
+                    e
+                ),
+            }
+        }
+        #[cfg(windows)]
+        {
+            match windows_fs::symlink_dir(cargo_target_dir, &symlink_path) {
+                Ok(_) => {
+                    println!(
+                        "RCargo: Created directory symlink '{}' -> '{}'",
+                        symlink_path.display(),
+                        cargo_target_dir.display()
+                    );
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Warning: Failed to create symlink '{}' -> '{}'. Error: {}. On Windows, this might require administrator privileges or Developer Mode to be enabled.",
+                        symlink_path.display(),
+                        cargo_target_dir.display(),
+                        e
+                    );
+                }
+            }
+        }
+        #[cfg(not(any(unix, windows)))]
+        {
+            eprintln!(
+                "Warning: Symlink creation for '{}' is not supported on this platform. Skipping.",
+                symlink_path.display()
+            );
+        }
+    }
+    Ok(())
 }
