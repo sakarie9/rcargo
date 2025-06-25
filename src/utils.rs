@@ -243,3 +243,56 @@ pub fn create_target_symlink(
     }
     Ok(())
 }
+
+/// Checks if the given cargo command requires target directory creation.
+///
+/// Returns false for commands that are purely informational or don't involve
+/// compilation/building, such as --help, --version, etc.
+pub fn is_required_target_dir(args: &[String]) -> bool {
+    if args.is_empty() {
+        return false;
+    }
+
+    // Commands that don't need target directory
+    let non_build_commands = [
+        "--help",
+        "-h",
+        "--version",
+        "-V",
+        "--list",
+        "help",
+        "version",
+        "search",
+        "login",
+        "logout",
+        "owner",
+        "yank",
+        "publish",
+    ];
+
+    // Check for global flags that don't require building
+    for arg in args {
+        if non_build_commands.contains(&arg.as_str()) {
+            return false;
+        }
+    }
+
+    // Check for subcommands that don't require building
+    if let Some(first_arg) = args.first() {
+        // Skip flags to find actual subcommand
+        let subcommand = if first_arg.starts_with('-') {
+            args.iter().find(|arg| !arg.starts_with('-'))
+        } else {
+            Some(first_arg)
+        };
+
+        if let Some(cmd) = subcommand {
+            match cmd.as_str() {
+                "search" | "login" | "logout" | "owner" | "yank" | "publish" => return false,
+                _ => {}
+            }
+        }
+    }
+
+    true
+}

@@ -8,7 +8,7 @@ mod commands;
 mod utils;
 
 use commands::{handle_purge_command, handle_size_command};
-use utils::{ProjectIdentifier, create_target_symlink};
+use utils::{ProjectIdentifier, create_target_symlink, is_required_target_dir};
 
 /// Default target directory location when `RCARGO_TARGET_DIR` is not set.
 ///
@@ -130,6 +130,23 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
 
     // If no subcommand, proceed with normal cargo execution
     let args = cli.cargo_args;
+
+    // Check if this command requires target directory
+    if !is_required_target_dir(&args) {
+        // For commands that don't need target directory, just execute cargo directly
+        let mut cmd = Command::new("cargo");
+        cmd.args(&args);
+
+        let exit_status = cmd.status()?;
+        if !exit_status.success() {
+            if let Some(code) = exit_status.code() {
+                exit(code);
+            } else {
+                exit(1);
+            }
+        }
+        return Ok(());
+    }
 
     // Get current project information
     let project_path = env::current_dir()?;
