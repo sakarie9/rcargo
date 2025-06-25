@@ -32,6 +32,33 @@ cargo install --git https://github.com/sakarie9/rcargo.git
 
 设置 `RCARGO_TARGET_DIR` 环境变量来自定义目标目录。
 
+### 💡 使用技巧
+
+#### 使用 rcargo 替代 cargo
+
+有两种便捷的方式可以让 `rcargo` 成为您默认的 Rust 构建工具：
+
+##### 方法一：符号链接
+
+配置 `rcargo` 在项目目录中创建名为 `target` 的符号链接。这样，`cargo` 和 `rcargo` 都将无缝使用相同的重定向目标目录：
+
+```bash
+export RCARGO_TARGET_LINK_NAME=target
+```
+
+> [!NOTE]
+> 如果符号链接的目标目录不存在，`cargo` 命令将会失败。在使用符号链接方式之前，您必须至少运行一次 `rcargo` 来创建目标目录。
+
+##### 方法二：Shell 别名
+
+创建别名，当您输入 `cargo` 时自动使用 `rcargo`：
+
+```bash
+alias cargo=rcargo
+```
+
+将此行添加到您的 shell 配置文件（`.bashrc`、`.zshrc` 等）中以使其持久生效。
+
 ## 📋 命令
 
 ### 标准 Cargo 命令

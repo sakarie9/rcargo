@@ -32,6 +32,33 @@ Use `rcargo` exactly like `cargo`, but your target will be put in specified dire
 
 set `RCARGO_TARGET_DIR` environment varibles to custom target directory.
 
+### 💡 Tips
+
+#### Replace cargo with rcargo
+
+There are two convenient ways to make `rcargo` your default Rust build tool:
+
+##### Method 1: Symbolic Link Approach
+
+Configure `rcargo` to create a symbolic link named `target` in your project directory. This way, both `cargo` and `rcargo` will seamlessly use the same redirected target directory:
+
+```bash
+export RCARGO_TARGET_LINK_NAME=target
+```
+
+> [!NOTE]
+> If the symbolic link target directory doesn't exist, `cargo` commands will fail. You must run `rcargo` at least once to create the target directory before using the symbolic link approach.
+
+##### Method 2: Shell Alias
+
+Create an alias to automatically use `rcargo` whenever you type `cargo`:
+
+```bash
+alias cargo=rcargo
+```
+
+Add this line to your shell configuration file (`.bashrc`, `.zshrc`, etc.) to make it permanent.
+
 ## 📋 Commands
 
 ### Standard Cargo Commands
