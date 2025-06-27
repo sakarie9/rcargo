@@ -268,6 +268,7 @@ pub fn is_required_target_dir(args: &[String]) -> bool {
         "owner",
         "yank",
         "publish",
+        "cache",
     ];
 
     // Check for global flags that don't require building
