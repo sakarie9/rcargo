@@ -149,7 +149,21 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Get current project information
-    let project_path = env::current_dir()?;
+    let project_path;
+
+    let mut cmd = Command::new("cargo");
+    cmd.args("metadata --format-version 1 --no-deps".split_whitespace());
+    let output = cmd.output()?;
+    if output.status.success() {
+        // Parse the JSON output to get the project path
+        let metadata: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+        project_path = PathBuf::from(metadata["workspace_root"].as_str().unwrap_or("."));
+    } else {
+        // Fallback to current directory if metadata command fails
+        // eprintln!("Warning: Failed to get project metadata, using current directory as project path.");
+        project_path = env::current_dir()?;
+    }
+
     let project_identifier = ProjectIdentifier::new(&project_path)?;
 
     // Get target directory from environment variable or use default
