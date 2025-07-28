@@ -8,7 +8,7 @@ mod commands;
 mod utils;
 
 use commands::{handle_purge_command, handle_size_command};
-use utils::{ProjectIdentifier, create_target_symlink, is_required_target_dir};
+use utils::{ProjectIdentifier, create_target_symlink, get_cargo_path, is_required_target_dir};
 
 /// Default target directory location when `RCARGO_TARGET_DIR` is not set.
 ///
@@ -98,8 +98,10 @@ fn print_version() {
     // Print rcargo version
     println!("rcargo {}", env!("CARGO_PKG_VERSION"));
 
+    let cargo_path = get_cargo_path();
+
     // Print cargo version
-    match Command::new("cargo").arg("--version").output() {
+    match Command::new(cargo_path).arg("--version").output() {
         Ok(output) => {
             if output.status.success() {
                 let cargo_version = String::from_utf8_lossy(&output.stdout);
@@ -116,6 +118,9 @@ fn print_version() {
 
 // Executes the main rcargo functionality based on parsed command line arguments.
 fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+    // Get the cargo path from environment or use default
+    let cargo_path = get_cargo_path();
+
     // Handle rcargo-specific subcommands
     if let Some(command) = cli.command {
         match command {
@@ -134,7 +139,7 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     // Check if this command requires target directory
     if !is_required_target_dir(&args) {
         // For commands that don't need target directory, just execute cargo directly
-        let mut cmd = Command::new("cargo");
+        let mut cmd = Command::new(&cargo_path);
         cmd.args(&args);
 
         let exit_status = cmd.status()?;
@@ -151,7 +156,7 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     // Get current project information
     let project_path;
 
-    let mut cmd = Command::new("cargo");
+    let mut cmd = Command::new(&cargo_path);
     cmd.args("metadata --format-version 1 --no-deps".split_whitespace());
     let output = cmd.output()?;
     if output.status.success() {
@@ -173,7 +178,12 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     let cargo_target_dir = PathBuf::from(target_dir).join(project_identifier.identifier());
 
     // Create directory (if it doesn't exist)
-    // fs::create_dir_all(&cargo_target_dir)?;
+    std::fs::create_dir_all(&cargo_target_dir)?;
+
+    // Create target symlink after successful execution
+    if let Err(e) = create_target_symlink(&project_path, &cargo_target_dir) {
+        eprintln!("Warning: Could not create target symlink: {}", e);
+    }
 
     // Print information message
     println!(
@@ -182,7 +192,7 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Set environment variable and execute the real cargo command
-    let mut cmd = Command::new("cargo");
+    let mut cmd = Command::new(&cargo_path);
     cmd.args(&args);
     cmd.env("CARGO_TARGET_DIR", &cargo_target_dir);
 
@@ -194,11 +204,6 @@ fn run_rcargo(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
         } else {
             exit(1);
         }
-    }
-
-    // Create target symlink after successful execution
-    if let Err(e) = create_target_symlink(&project_path, &cargo_target_dir) {
-        eprintln!("Warning: Could not create target symlink: {}", e);
     }
 
     Ok(())

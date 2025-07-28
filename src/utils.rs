@@ -297,3 +297,16 @@ pub fn is_required_target_dir(args: &[String]) -> bool {
 
     true
 }
+
+pub fn get_cargo_path() -> String {
+    // Check if RCARGO_CARGO_PATH environment variable is set, otherwise use "/usr/bin/cargo", else use the default cargo path.
+    let cargo_path = env::var("RCARGO_CARGO_PATH")
+        .unwrap_or_else(|_| "/usr/bin/cargo".to_string())
+        .trim()
+        .to_string();
+    // If cargo_path file exists, use it, otherwise fallback to "cargo" command.
+    if !PathBuf::from(&cargo_path).exists() && cargo_path != "cargo" {
+        return "cargo".to_string(); // Fallback to default cargo command
+    }
+    cargo_path
+}
