@@ -126,6 +126,7 @@ rcargo --version
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `RCARGO_CARGO_PATH` | Custom cargo binary path | `/usr/bin/cargo` |
 | `RCARGO_TARGET_DIR` | Custom target directory location | `/tmp/rcargo_targets` |
 | `RCARGO_NO_TARGET_LINK` | Not create link to target | `false` |
 | `RCARGO_TARGET_LINK_NAME` | Target link name in project root | `target_rcargo` |

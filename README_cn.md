@@ -126,6 +126,7 @@ rcargo --version
 
 | 变量 | 描述 | 默认值 |
 |------|------|--------|
+| `RCARGO_CARGO_PATH` | 自定义 cargo 二进制位置 | `/usr/bin/cargo` |
 | `RCARGO_TARGET_DIR` | 自定义目标目录位置 | `/tmp/rcargo_targets` |
 | `RCARGO_NO_TARGET_LINK` | 不创建链接到指定 target 目录的链接 | `false` |
 | `RCARGO_TARGET_LINK_NAME` | target 的目录链接名 | `target_rcargo` |
