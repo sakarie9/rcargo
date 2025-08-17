@@ -102,10 +102,10 @@ fn get_project_name(project_path: &Path) -> Result<String, Box<dyn std::error::E
             Ok(content) => {
                 match toml::from_str::<CargoToml>(&content) {
                     Ok(cargo_toml) => {
-                        if let Some(package) = cargo_toml.package {
-                            if let Some(name) = package.name {
-                                return Ok(name);
-                            }
+                        if let Some(package) = cargo_toml.package
+                            && let Some(name) = package.name
+                        {
+                            return Ok(name);
                         }
                     }
                     Err(_) => {
@@ -129,11 +129,11 @@ fn get_project_name(project_path: &Path) -> Result<String, Box<dyn std::error::E
 
 // Helper function to create the target symlink
 pub fn create_target_symlink(
-    project_path: &PathBuf,
-    cargo_target_dir: &PathBuf,
+    project_path: &Path,
+    cargo_target_dir: &Path,
 ) -> Result<(), std::io::Error> {
     if env::var("RCARGO_NO_TARGET_LINK")
-        .map_or(false, |val| val.eq_ignore_ascii_case("true") || val == "1")
+        .is_ok_and(|val| val.eq_ignore_ascii_case("true") || val == "1")
     {
         return Ok(()); // Skip creating link if RCARGO_NO_TARGET_LINK is set
     }
@@ -153,10 +153,10 @@ pub fn create_target_symlink(
             Ok(metadata) => {
                 if metadata.file_type().is_symlink() {
                     // If same target directory, do nothing
-                    if let Ok(existing_target) = fs::read_link(&symlink_path) {
-                        if existing_target == cargo_target_dir.as_path() {
-                            return Ok(());
-                        }
+                    if let Ok(existing_target) = fs::read_link(&symlink_path)
+                        && existing_target == cargo_target_dir
+                    {
+                        return Ok(());
                     }
                     // If symlink exists but points to a different target, remove it
                     if let Err(e) = fs::remove_file(&symlink_path) {
@@ -266,7 +266,7 @@ pub fn is_required_target_dir(args: &[String]) -> bool {
     // Commands that require target directory (whitelist)
     let build_commands = [
         "build",
-        "run", 
+        "run",
         "test",
         "bench",
         "check",
@@ -280,7 +280,7 @@ pub fn is_required_target_dir(args: &[String]) -> bool {
         "expand",
         "fmt", // cargo fmt might need target for some configurations
         "miri",
-        "nextest", // if nextest is installed
+        "nextest",   // if nextest is installed
         "tarpaulin", // if tarpaulin is installed
     ];
 
